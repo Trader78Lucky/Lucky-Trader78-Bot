@@ -116,7 +116,11 @@ def check_alerts(updater):
             if volume >= target_vol:
                 updater.bot.send_message(
                     chat_id=chat_id,
-                
+       while True:
+    for symbol in list(volume_alerts):
+        try:
+            url = f"https://fapi.binance.com/fapi/v1/ticker/24hr?symbol={symbol}"
+            ...         
            
     try:
         url = f"https://fapi.binance.com/fapi/v1/ticker/24hr?symbol={symbol}"
