@@ -1,16 +1,18 @@
-
 import time
 import threading
 import requests
 from telegram.ext import Updater, CommandHandler
 from telegram import ParseMode
 
-BOT_TOKEN = '7701011442:AAEdy5RkdBadlnNNQmvEEuimqfNO6Ll-Z5M'
+# === TOKEN TVOG BOTA ===
+BOT_TOKEN = '7701011442:AAEdy5RkdBadlnNNQmveEuimqfNO6Ll-Z5M'
 
+# === Globalne promenljive ===
 last_sent_time = 0
 price_alerts = {}
 volume_alerts = {}
 
+# === Anti-spam limiter ===
 def throttle():
     global last_sent_time
     now = time.time()
@@ -18,6 +20,8 @@ def throttle():
         return False
     last_sent_time = now
     return True
+
+# === Komande ===
 
 def start(update, context):
     if throttle():
@@ -30,32 +34,32 @@ def cena(update, context):
         response = requests.get('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT')
         data = response.json()
         cena_btc = data['price']
-        update.message.reply_text(f"Trenutna cena BTC-a: *{cena_btc}* USDT", parse_mode=ParseMode.MARKDOWN)
+        update.message.reply_text(f"Trenutna cena BTC-a: {cena_btc} USDT")
     except:
-        update.message.reply_text("Greška pri dohvatanju cene BTC-a.")
+        update.message.reply_text("Greška pri dohvatanju cene.")
 
 def pozdrav(update, context):
-    if throttle():
-        update.message.reply_text("Nikad ne odustaj, Srećko! Idemo jako!")
+    update.message.reply_text("Pozdrav, legendo!")
 
 def status(update, context):
-    if throttle():
-        update.message.reply_text("Pratim: BTCUSDT, GUNUSDT, TSTUSDT, KAITOUSDT...")
+    pairs = list(price_alerts.keys()) + list(volume_alerts.keys())
+    poruka = f"Pratim: {', '.join(pairs)}" if pairs else "Nema aktivnih parova za praćenje."
+    update.message.reply_text(poruka)
 
 def get_top_movers(limit=5):
-    url = "https://fapi.binance.com/fapi/v1/ticker/24hr"
     try:
+        url = "https://fapi.binance.com/fapi/v1/ticker/24hr"
         response = requests.get(url)
         data = response.json()
-        usdt_pairs = [coin for coin in data if coin['symbol'].endswith('USDT')]
-        sorted_pairs = sorted(usdt_pairs, key=lambda x: float(x['priceChangePercent']), reverse=True)
+        usdt_pairs = [coin for coin in data if coin["symbol"].endswith("USDT")]
+        sorted_pairs = sorted(usdt_pairs, key=lambda x: float(x["priceChangePercent"]), reverse=True)
         top_movers = sorted_pairs[:limit]
         result = []
         for coin in top_movers:
             symbol = coin['symbol']
             change = float(coin['priceChangePercent'])
             price = float(coin['lastPrice'])
-            result.append(f"{symbol}: {price} USDT ({change:+.2f}%)")
+            result.append(f"{symbol}: {price:.5f} USDT ({change:+.2f}%)")
         return result
     except:
         return ["Greška pri dohvatanju podataka."]
@@ -64,16 +68,7 @@ def skener(update, context):
     if not throttle():
         return
     movers = get_top_movers()
-    def skener(update, context):
-
-        return
-    movers = get_top_movers()
-    poruka = (
-        "Top Movers na Binance Futures:\n\n"
-        + "\n".join(movers)
-    )
-    update.message.reply_text(poruka)
-
+    poruka = "Top Movers na Binance Futures:\n\n" + "\n".join(movers)
     update.message.reply_text(poruka)
 
 def alert(update, context):
@@ -86,7 +81,7 @@ def alert(update, context):
         if symbol not in price_alerts:
             price_alerts[symbol] = []
         price_alerts[symbol].append((chat_id, target))
-        update.message.reply_text(f"Alert postavljen: {symbol} kada pređe {target} USDT.")
+        update.message.reply_text(f"Alert postavljen: {symbol} kada pređe {target}")
     except:
         update.message.reply_text("Koristi komandu ovako:\n/alert BTCUSDT 68000")
 
@@ -102,56 +97,13 @@ def volumen(update, context):
         volume_alerts[symbol].append((chat_id, target_vol))
         update.message.reply_text(f"Volumen alert postavljen: {symbol} kada pređe {target_vol} USDT.")
     except:
-        update.message.reply_text("Koristi komandu ovako:\n/volumen BTCUSDT 1000000")
+        update.message.reply_text("Koristi komandu ovako:\n/volumen BTCUSDT 100000000")
+
+# === Provera alertova ===
 
 def check_alerts(updater):
     while True:
-        for symbol in list(volume_alerts):
-    try:
-        url = f"https://fapi.binance.com/fapi/v1/ticker/24hr?symbol={symbol}"
-        response = requests.get(url)
-        volume = float(response.json()["quoteVolume"])
-        triggered = []
-        for chat_id, target_vol in volume_alerts[symbol]:
-            if volume >= target_vol:
-                updater.bot.send_message(
-                    chat_id=chat_id,
-       while True:
-    for symbol in list(volume_alerts):
-        try:
-            url = f"https://fapi.binance.com/fapi/v1/ticker/24hr?symbol={symbol}"
-            ...         
-           
-    try:
-        url = f"https://fapi.binance.com/fapi/v1/ticker/24hr?symbol={symbol}"
-        response = requests.get(url)
-        volume = float(response.json()["quoteVolume"])
-        triggered = []
-        for chat_id, target_vol in volume_alerts[symbol]:
-            if volume >= target_vol:
-                updater.bot.send_message(
-                    chat_id=chat_id,
-                    text=f"ALERT: Volumen za {symbol} je sada {volume:,.0f} USDT (prešao {target_vol:,.0f})!"
-                )
-                triggered.append((chat_id, target_vol))
-        volume_alerts[symbol] = [
-            entry for entry in volume_alerts[symbol] if entry not in triggered
-        ]
-    except:
-        pass
-         try:
-                url = f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}"
-                response = requests.get(url)
-                price = float(response.json()["price"])
-                triggered = []
-                for chat_id, target in price_alerts[symbol]:
-                    if price >= target:
-                        updater.bot.send_message(chat_id=chat_id, text=f"ALERT: {symbol} je sada {price} USDT (prešao {target})!")
-                        triggered.append((chat_id, target))
-                price_alerts[symbol] = [entry for entry in price_alerts[symbol] if entry not in triggered]
-            except:
-                pass
-
+        # --- Provera volumena ---
         for symbol in list(volume_alerts):
             try:
                 url = f"https://fapi.binance.com/fapi/v1/ticker/24hr?symbol={symbol}"
@@ -160,13 +112,40 @@ def check_alerts(updater):
                 triggered = []
                 for chat_id, target_vol in volume_alerts[symbol]:
                     if volume >= target_vol:
-                        updater.bot.send_message(chat_id=chat_id, text=f"ALERT: Volumen za {symbol} je sada {volume:,.0f} USDT (prešao {target_vol:,.0f})!")
+                        updater.bot.send_message(
+                            chat_id=chat_id,
+                            text=f"ALERT: Volumen za {symbol} je sada {volume:,.3f} USDT (prešao {target_vol:,}!)"
+                        )
                         triggered.append((chat_id, target_vol))
-                volume_alerts[symbol] = [entry for entry in volume_alerts[symbol] if entry not in triggered]
+                volume_alerts[symbol] = [
+                    entry for entry in volume_alerts[symbol] if entry not in triggered
+                ]
+            except:
+                pass
+
+        # --- Provera cene ---
+        for symbol in list(price_alerts):
+            try:
+                url = f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}"
+                response = requests.get(url)
+                price = float(response.json()["price"])
+                triggered = []
+                for chat_id, target in price_alerts[symbol]:
+                    if price >= target:
+                        updater.bot.send_message(
+                            chat_id=chat_id,
+                            text=f"ALERT: Cena za {symbol} je sada {price} USDT (prešla {target})"
+                        )
+                        triggered.append((chat_id, target))
+                price_alerts[symbol] = [
+                    entry for entry in price_alerts[symbol] if entry not in triggered
+                ]
             except:
                 pass
 
         time.sleep(10)
+
+# === Pokretanje bota ===
 
 def main():
     updater = Updater(BOT_TOKEN, use_context=True)
